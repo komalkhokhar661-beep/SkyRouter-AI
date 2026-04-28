@@ -1,0 +1,62 @@
+// /api/claude.js — Vercel Edge Function
+// This proxies requests to Anthropic API so your API key stays secret on the server.
+//
+// SETUP:
+//   1. In Vercel dashboard → Your Project → Settings → Environment Variables
+//   2. Add: ANTHROPIC_API_KEY = sk-ant-xxxxxxxxxxxxxxxx
+//   3. In index.html, change the fetch URL from:
+//      'https://api.anthropic.com/v1/messages'
+//      to:
+//      '/api/claude'
+
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const body = await req.json();
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
