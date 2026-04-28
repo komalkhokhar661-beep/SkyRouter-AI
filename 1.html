@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyRoute Planner – AI Travel Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --deep: #0a0d14;
+      --deep2: #111622;
+      --surface: rgba(255,255,255,0.06);
+      --surface2: rgba(255,255,255,0.10);
+      --border: rgba(201,168,76,0.25);
+      --text: #f0ece3;
+      --muted: rgba(240,236,227,0.55);
+      --radius: 18px;
+      --radius-sm: 10px;
+      --transition: 0.4s cubic-bezier(0.23,1,0.32,1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--text);overflow-x:hidden;line-height:1.65}
+    a{color:inherit;text-decoration:none}
+    img{display:block;width:100%;object-fit:cover}
+    button{cursor:pointer;border:none;outline:none;font-family:inherit}
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:var(--deep)}
+    ::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px}
+
+    /* ─── NAVBAR ─── */
+    .navbar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 2rem;transition:background var(--transition),box-shadow var(--transition)}
+    .navbar.scrolled{background:rgba(10,13,20,0.92);backdrop-filter:blur(20px);box-shadow:0 1px 0 var(--border)}
+    .nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:72px}
+    .nav-logo{display:flex;align-items:center;gap:8px;font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;letter-spacing:0.02em}
+    .logo-highlight{color:var(--gold)}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-link{font-size:0.88rem;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);transition:color 0.2s;padding:4px 0;border-bottom:1.5px solid transparent}
+    .nav-link:hover,.nav-link.active{color:var(--gold);border-bottom-color:var(--gold)}
+    .nav-cta{background:var(--gold);color:var(--deep);padding:9px 22px;border-radius:50px;font-size:0.85rem;font-weight:600;transition:all 0.25s}
+    .nav-cta:hover{background:var(--gold-light);transform:translateY(-1px)}
+    .nav-toggle{display:none;flex-direction:column;gap:5px;background:none;padding:4px}
+    .nav-toggle span{width:24px;height:2px;background:var(--text);border-radius:2px;transition:all 0.3s}
+
+    /* ─── HERO ─── */
+    .hero{position:relative;height:100vh;min-height:700px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .hero-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1920&q=80') center/cover no-repeat;transform:scale(1.05);animation:heroZoom 20s ease-in-out infinite alternate}
+    @keyframes heroZoom{0%{transform:scale(1.05)}100%{transform:scale(1.12)}}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(160deg,rgba(10,13,20,0.75) 0%,rgba(10,13,20,0.45) 50%,rgba(10,13,20,0.85) 100%)}
+    .hero-content{position:relative;text-align:center;max-width:800px;padding:0 2rem;animation:fadeUp 1s ease both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+    .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,76,0.15);border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem}
+    .hero-title{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,8vw,6rem);font-weight:700;line-height:1.05;margin-bottom:1.2rem}
+    .hero-title em{font-style:italic;color:var(--gold)}
+    .hero-sub{font-size:1.1rem;color:var(--muted);max-width:520px;margin:0 auto 2.5rem}
+    .hero-search{display:flex;background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:60px;padding:6px 6px 6px 24px;gap:8px;max-width:520px;margin:0 auto}
+    .hero-search input{flex:1;background:none;border:none;color:var(--text);font-family:inherit;font-size:0.95rem;outline:none}
+    .hero-search input::placeholder{color:var(--muted)}
+    .btn-gold{background:var(--gold);color:var(--deep);padding:12px 28px;border-radius:50px;font-weight:600;font-size:0.9rem;transition:all 0.25s;white-space:nowrap}
+    .btn-gold:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,0.35)}
+    .hero-stats{position:absolute;bottom:3rem;left:50%;transform:translateX(-50%);display:flex;gap:3rem}
+    .hero-stat{text-align:center}
+    .hero-stat strong{font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--gold);display:block}
+    .hero-stat span{font-size:0.78rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase}
+    .scroll-hint{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0.5}
+    .scroll-hint span{font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase}
+    .scroll-hint-line{width:1px;height:40px;background:linear-gradient(to bottom,var(--gold),transparent);animation:scrollLine 2s ease infinite}
+    @keyframes scrollLine{0%,100%{opacity:1}50%{opacity:0.2}}
+
+    /* ─── SECTIONS ─── */
+    section{padding:100px 2rem}
+    .container{max-width:1280px;margin:0 auto}
+    .section-header{margin-bottom:4rem}
+    .section-tag{font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;display:block}
+    .section-title{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,4vw,3.2rem);font-weight:700;line-height:1.1}
+    .section-title em{font-style:italic;color:var(--gold)}
+    .section-desc{color:var(--muted);max-width:480px;margin-top:1rem;font-size:0.95rem}
+
+    /* ─── DESTINATIONS GRID ─── */
+    .dest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px}
+    .dest-card{position:relative;border-radius:var(--radius);overflow:hidden;cursor:pointer;height:420px;transition:transform var(--transition),box-shadow var(--transition)}
+    .dest-card:hover{transform:translateY(-8px);box-shadow:0 30px 60px rgba(0,0,0,0.5)}
+    .dest-card:hover .dest-img{transform:scale(1.08)}
+    .dest-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 0.7s cubic-bezier(0.23,1,0.32,1)}
+    .dest-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,13,20,0.92) 0%,rgba(10,13,20,0.2) 55%,transparent 100%)}
+    .dest-badge{position:absolute;top:16px;right:16px;background:var(--gold);color:var(--deep);padding:4px 12px;border-radius:50px;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+    .dest-info{position:absolute;bottom:0;left:0;right:0;padding:1.8rem}
+    .dest-country{font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+    .dest-name{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:700;margin-bottom:6px}
+    .dest-meta{display:flex;gap:16px;font-size:0.8rem;color:var(--muted);margin-bottom:1rem}
+    .dest-budget{font-size:0.88rem;color:var(--gold-light);font-weight:500}
+    .dest-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,76,0.15);border:1px solid var(--border);padding:8px 18px;border-radius:50px;font-size:0.8rem;font-weight:500;color:var(--gold);transition:all 0.2s;margin-top:8px}
+    .dest-btn:hover{background:var(--gold);color:var(--deep)}
+
+    /* ─── FEATURES ─── */
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;margin-top:3rem}
+    .feature-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;transition:all var(--transition);position:relative;overflow:hidden}
+    .feature-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,168,76,0.05),transparent);opacity:0;transition:opacity 0.3s}
+    .feature-card:hover{border-color:var(--gold);transform:translateY(-4px)}
+    .feature-card:hover::before{opacity:1}
+    .feature-icon{font-size:2.2rem;margin-bottom:1rem}
+    .feature-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.5rem}
+    .feature-desc{font-size:0.87rem;color:var(--muted);line-height:1.7}
+
+    /* ─── PLANNER ─── */
+    .planner-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3rem;max-width:900px}
+    .planner-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:1.5rem}
+    .form-group{display:flex;flex-direction:column;gap:8px}
+    .form-group label{font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold)}
+    .form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;color:var(--text);font-family:inherit;font-size:0.9rem;transition:border 0.2s;outline:none}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gold)}
+    .form-group select option{background:var(--deep2);color:var(--text)}
+    .form-group textarea{resize:vertical;min-height:80px}
+    .planner-result{margin-top:2rem;padding:2rem;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:var(--radius);display:none}
+    .planner-result.show{display:block;animation:fadeUp 0.4s ease}
+    .result-title{font-family:'Cormorant Garamond',serif;font-size:1.6rem;margin-bottom:1rem;color:var(--gold)}
+    .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .result-item{padding:1rem;background:rgba(255,255,255,0.04);border-radius:var(--radius-sm)}
+    .result-item strong{display:block;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .result-item span{color:var(--text);font-size:0.95rem}
+
+    /* ─── TIPS ─── */
+    .tips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
+    .tip-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;transition:all 0.3s}
+    .tip-card:hover{border-color:var(--gold);transform:translateY(-4px)}
+    .tip-number{font-family:'Cormorant Garamond',serif;font-size:3rem;font-weight:700;color:rgba(201,168,76,0.2);line-height:1;margin-bottom:0.5rem}
+    .tip-title{font-size:1.05rem;font-weight:600;margin-bottom:0.5rem}
+    .tip-desc{font-size:0.87rem;color:var(--muted);line-height:1.7}
+
+    /* ─── ABOUT ─── */
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+    .about-img-wrap{position:relative;border-radius:var(--radius);overflow:hidden;height:500px}
+    .about-img-wrap img{width:100%;height:100%;object-fit:cover}
+    .about-img-wrap::after{content:'';position:absolute;inset:0;border:1px solid var(--border);border-radius:var(--radius)}
+    .about-text p{color:var(--muted);margin-bottom:1.2rem;font-size:0.95rem;line-height:1.8}
+    .about-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:1.5rem}
+    .about-tag{background:rgba(201,168,76,0.1);border:1px solid var(--border);padding:6px 14px;border-radius:50px;font-size:0.8rem;color:var(--gold)}
+
+    /* ─── CONTACT ─── */
+    .contact-grid{display:grid;grid-template-columns:1fr 1.5fr;gap:4rem;align-items:start}
+    .contact-info h3{font-family:'Cormorant Garamond',serif;font-size:1.8rem;margin-bottom:1rem}
+    .contact-info p{color:var(--muted);font-size:0.9rem;line-height:1.8;margin-bottom:1.5rem}
+    .contact-detail{display:flex;align-items:center;gap:12px;margin-bottom:1rem;font-size:0.9rem;color:var(--muted)}
+    .contact-detail span:first-child{font-size:1.4rem}
+    .contact-form{display:flex;flex-direction:column;gap:16px}
+
+    /* ─── FOOTER ─── */
+    .footer{background:var(--deep2);border-top:1px solid var(--border);padding:4rem 2rem 2rem}
+    .footer-inner{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;margin-bottom:3rem}
+    .footer-brand-name{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;margin-bottom:0.75rem}
+    .footer-brand-name em{font-style:normal;color:var(--gold)}
+    .footer-tagline{color:var(--muted);font-size:0.87rem;margin-bottom:1rem}
+    .footer-col h4{font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem}
+    .footer-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+    .footer-col ul li a{color:var(--muted);font-size:0.87rem;transition:color 0.2s}
+    .footer-col ul li a:hover{color:var(--gold)}
+    .footer-bottom{max-width:1280px;margin:0 auto;border-top:1px solid var(--border);padding-top:1.5rem;display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:var(--muted)}
+    .footer-credit{text-align:right;line-height:1.6}
+    .footer-credit strong{color:var(--gold)}
+
+    /* ─── DESTINATION DETAIL PAGE ─── */
+    .page-overlay{position:fixed;inset:0;z-index:2000;background:var(--deep);overflow-y:auto;transform:translateX(100%);transition:transform 0.5s cubic-bezier(0.23,1,0.32,1)}
+    .page-overlay.open{transform:translateX(0)}
+    .page-close{position:fixed;top:24px;left:24px;z-index:2100;background:rgba(201,168,76,0.15);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:50px;font-size:0.85rem;font-weight:500;backdrop-filter:blur(10px);display:flex;align-items:center;gap:8px;transition:all 0.2s;cursor:pointer}
+    .page-close:hover{background:var(--gold);color:var(--deep)}
+    .detail-hero{position:relative;height:70vh;min-height:500px;display:flex;align-items:flex-end}
+    .detail-hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:none}
+    .detail-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,var(--deep) 0%,rgba(10,13,20,0.3) 60%,rgba(10,13,20,0.5) 100%)}
+    .detail-hero-content{position:relative;padding:3rem 3rem 4rem;max-width:1280px;margin:0 auto;width:100%}
+    .detail-hero-content .section-tag{margin-bottom:0.5rem}
+    .detail-hero-content h1{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,6vw,5rem);font-weight:700;line-height:1.05;margin-bottom:0.5rem}
+    .detail-hero-content p{font-size:1.1rem;color:var(--muted);max-width:500px}
+    .detail-body{max-width:1280px;margin:0 auto;padding:3rem}
+    .detail-section{margin-bottom:3.5rem}
+    .detail-section-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:10px}
+    .detail-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .detail-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.4rem}
+    .detail-card h4{font-weight:600;margin-bottom:6px;font-size:0.95rem}
+    .detail-card p{font-size:0.87rem;color:var(--muted);line-height:1.7}
+    .places-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+    .place-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;transition:all 0.2s}
+    .place-item:hover{border-color:var(--gold)}
+    .place-item-icon{font-size:1.5rem;margin-bottom:6px}
+    .place-item h4{font-size:0.9rem;font-weight:600;margin-bottom:4px}
+    .place-item p{font-size:0.8rem;color:var(--muted)}
+    .budget-box{background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04));border:1px solid var(--border);border-radius:var(--radius);padding:2rem}
+    .budget-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;margin-bottom:1.2rem}
+    .budget-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+    .budget-item{background:rgba(255,255,255,0.04);border-radius:var(--radius-sm);padding:1rem;text-align:center}
+    .budget-item-icon{font-size:1.6rem;margin-bottom:4px}
+    .budget-item-label{font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .budget-item-value{font-size:0.95rem;font-weight:600;color:var(--gold-light)}
+    .budget-total{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:1.1rem;font-weight:600}
+    .budget-total span:last-child{color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.4rem}
+    .gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .gallery-img{border-radius:var(--radius-sm);height:220px;overflow:hidden;cursor:pointer}
+    .gallery-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.5s ease}
+    .gallery-img:hover img{transform:scale(1.06)}
+    .gallery-img:first-child{grid-column:span 2}
+    .tips-list{display:flex;flex-direction:column;gap:12px}
+    .tips-list-item{display:flex;gap:12px;align-items:flex-start;padding:1rem;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)}
+    .tips-list-item-icon{font-size:1.3rem;flex-shrink:0;margin-top:2px}
+    .tips-list-item-text h4{font-size:0.9rem;font-weight:600;margin-bottom:3px}
+    .tips-list-item-text p{font-size:0.83rem;color:var(--muted)}
+    .detail-cta-bar{display:flex;gap:12px;margin-top:2rem}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);padding:12px 28px;border-radius:50px;font-weight:500;font-size:0.9rem;transition:all 0.25s;font-family:inherit}
+    .btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+
+    /* ─── AI CHAT ─── */
+    .chat-toggle{position:fixed;bottom:28px;right:28px;z-index:900;width:56px;height:56px;border-radius:50%;background:var(--gold);color:var(--deep);font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(201,168,76,0.4);transition:all 0.3s}
+    .chat-toggle:hover{transform:scale(1.08);background:var(--gold-light)}
+    .chat-window{position:fixed;bottom:96px;right:28px;z-index:900;width:360px;background:rgba(17,22,34,0.95);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:none;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.5)}
+    .chat-window.open{display:flex;animation:fadeUp 0.3s ease}
+    .chat-header{padding:1rem 1.2rem;background:rgba(201,168,76,0.08);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .chat-header-info{display:flex;align-items:center;gap:10px}
+    .chat-avatar{font-size:1.6rem}
+    .chat-header-info h4{font-size:0.95rem;font-weight:600}
+    .chat-status{font-size:0.72rem;color:#4ade80;letter-spacing:0.05em}
+    .chat-close-btn{background:none;color:var(--muted);font-size:1.1rem;transition:color 0.2s}
+    .chat-close-btn:hover{color:var(--text)}
+    .chat-messages{flex:1;overflow-y:auto;padding:1.2rem;display:flex;flex-direction:column;gap:12px;max-height:320px}
+    .chat-msg{max-width:85%}
+    .chat-msg.bot{align-self:flex-start}
+    .chat-msg.user{align-self:flex-end}
+    .chat-msg p{padding:10px 14px;border-radius:16px;font-size:0.87rem;line-height:1.6}
+    .chat-msg.bot p{background:var(--surface2);border-radius:4px 16px 16px 16px}
+    .chat-msg.user p{background:var(--gold);color:var(--deep);border-radius:16px 4px 16px 16px;font-weight:500}
+    .chat-input-area{padding:1rem;border-top:1px solid var(--border);display:flex;gap:8px}
+    .chat-input-area input{flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:50px;padding:10px 16px;color:var(--text);font-family:inherit;font-size:0.87rem;outline:none;transition:border 0.2s}
+    .chat-input-area input:focus{border-color:var(--gold)}
+    .chat-send-btn{background:var(--gold);color:var(--deep);padding:10px 18px;border-radius:50px;font-size:0.85rem;font-weight:600;transition:all 0.2s}
+    .chat-send-btn:hover{background:var(--gold-light)}
+
+    /* ─── SCROLL REVEAL ─── */
+    .reveal{opacity:0;transform:translateY(30px);transition:opacity 0.7s ease,transform 0.7s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    /* ─── LOADING DOTS ─── */
+    .typing-indicator span{width:6px;height:6px;background:var(--muted);border-radius:50%;display:inline-block;animation:typing 1.2s infinite}
+    .typing-indicator span:nth-child(2){animation-delay:0.2s}
+    .typing-indicator span:nth-child(3){animation-delay:0.4s}
+    @keyframes typing{0%,80%,100%{transform:scale(0.7);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width:900px){
+      .nav-links{display:none;position:fixed;top:72px;left:0;right:0;background:rgba(10,13,20,0.97);backdrop-filter:blur(20px);flex-direction:column;padding:2rem;gap:1.2rem;border-bottom:1px solid var(--border)}
+      .nav-links.open{display:flex}
+      .nav-toggle{display:flex}
+      .planner-grid{grid-template-columns:1fr}
+      .about-grid,.contact-grid{grid-template-columns:1fr}
+      .about-img-wrap{height:300px}
+      .footer-inner{grid-template-columns:1fr 1fr}
+      .detail-body{padding:2rem 1.5rem}
+      .detail-hero-content{padding:2rem 1.5rem 3rem}
+      .gallery-grid{grid-template-columns:1fr 1fr}
+      .gallery-img:first-child{grid-column:span 1}
+      .result-grid{grid-template-columns:1fr}
+      .detail-grid-2{grid-template-columns:1fr}
+      .hero-stats{gap:2rem}
+    }
+    @media(max-width:600px){
+      section{padding:70px 1.2rem}
+      .dest-grid{grid-template-columns:1fr}
+      .hero-stats{flex-direction:column;gap:1rem;bottom:1.5rem}
+      .footer-inner{grid-template-columns:1fr}
+      .chat-window{width:calc(100vw - 40px);right:20px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="#home" class="nav-logo">✈️ Sky<em class="logo-highlight">Route</em></a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#home" class="nav-link active" onclick="navClick(this)">Home</a></li>
+      <li><a href="#destinations" class="nav-link" onclick="navClick(this)">Destinations</a></li>
+      <li><a href="#planner" class="nav-link" onclick="navClick(this)">Trip Planner</a></li>
+      <li><a href="#tips" class="nav-link" onclick="navClick(this)">Travel Tips</a></li>
+      <li><a href="#about" class="nav-link" onclick="navClick(this)">About</a></li>
+      <li><a href="#contact" class="nav-link" onclick="navClick(this)">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="home" class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-badge">✨ AI-Powered Travel Planning</div>
+    <h1 class="hero-title">Discover the World<br>with <em>SkyRoute</em></h1>
+    <p class="hero-sub">Plan unforgettable journeys with AI insights, real budgets, and curated experiences across 100+ destinations.</p>
+    <div class="hero-search">
+      <input type="text" id="heroSearch" placeholder="Search destinations…" onkeydown="if(event.key==='Enter')heroSearchGo()">
+      <button class="btn-gold" onclick="heroSearchGo()">Explore →</button>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><strong>100+</strong><span>Destinations</span></div>
+    <div class="hero-stat"><strong>50K+</strong><span>Happy Travelers</span></div>
+    <div class="hero-stat"><strong>4.9★</strong><span>Rating</span></div>
+    <div class="hero-stat"><strong>24/7</strong><span>AI Support</span></div>
+  </div>
+  <div class="scroll-hint"><span>Scroll</span><div class="scroll-hint-line"></div></div>
+</section>
+
+<!-- WHY SKYROUTE -->
+<section id="features">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Why Choose Us</span>
+      <h2 class="section-title">Travel Smarter with <em>AI</em></h2>
+      <p class="section-desc">We combine cutting-edge technology with real destination expertise to craft your perfect trip.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal"><div class="feature-icon">🤖</div><h3 class="feature-title">AI Trip Planning</h3><p class="feature-desc">Our AI analyzes thousands of routes and experiences to build a custom itinerary just for you in seconds.</p></div>
+      <div class="feature-card reveal"><div class="feature-icon">💰</div><h3 class="feature-title">Real INR Budgets</h3><p class="feature-desc">Forget fake estimates. We show you real travel costs including flights, hotels, food, and local transport.</p></div>
+      <div class="feature-card reveal"><div class="feature-icon">🗺️</div><h3 class="feature-title">100+ Destinations</h3><p class="feature-desc">From Himalayan peaks to tropical beaches, explore curated guides for 100+ world-class destinations.</p></div>
+      <div class="feature-card reveal"><div class="feature-icon">📱</div><h3 class="feature-title">Mobile First</h3><p class="feature-desc">Access your trip plans anywhere, anytime. SkyRoute is fully optimized for mobile, tablet, and desktop.</p></div>
+      <div class="feature-card reveal"><div class="feature-icon">🛡️</div><h3 class="feature-title">Trusted & Safe</h3><p class="feature-desc">All destination data is verified by travel experts. Your privacy is protected with enterprise-grade security.</p></div>
+      <div class="feature-card reveal"><div class="feature-icon">🎯</div><h3 class="feature-title">Personalized</h3><p class="feature-desc">Answer a few questions and our AI tailors the entire trip — activities, pace, budget — to your style.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- DESTINATIONS -->
+<section id="destinations">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Top Destinations</span>
+      <h2 class="section-title">Where Will You Go <em>Next?</em></h2>
+      <p class="section-desc">Hand-picked destinations with rich detail, real pricing, and AI-powered planning.</p>
+    </div>
+    <div class="dest-grid" id="destGrid"></div>
+  </div>
+</section>
+
+<!-- TRIP PLANNER -->
+<section id="planner">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">AI Trip Planner</span>
+      <h2 class="section-title">Plan Your <em>Dream Trip</em></h2>
+      <p class="section-desc">Tell us your preferences and get an instant personalized itinerary with budget breakdown.</p>
+    </div>
+    <div class="planner-wrap reveal">
+      <div class="planner-grid">
+        <div class="form-group">
+          <label>Destination</label>
+          <select id="planDest">
+            <option value="">Select destination…</option>
+            <option>Dubai, UAE</option><option>Paris, France</option><option>Bali, Indonesia</option>
+            <option>Goa, India</option><option>Manali, India</option><option>Maldives</option>
+            <option>Singapore</option><option>Bangkok, Thailand</option><option>New York, USA</option><option>Tokyo, Japan</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Number of Travelers</label>
+          <input type="number" id="planTravelers" min="1" max="20" value="2" placeholder="2">
+        </div>
+        <div class="form-group">
+          <label>Travel Dates</label>
+          <input type="date" id="planDate">
+        </div>
+        <div class="form-group">
+          <label>Duration (Days)</label>
+          <input type="number" id="planDays" min="1" max="30" value="5" placeholder="5">
+        </div>
+        <div class="form-group">
+          <label>Budget Range</label>
+          <select id="planBudget">
+            <option value="budget">Budget – Under ₹50,000/person</option>
+            <option value="mid" selected>Mid-range – ₹50,000–₹1,50,000/person</option>
+            <option value="luxury">Luxury – Above ₹1,50,000/person</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Travel Style</label>
+          <select id="planStyle">
+            <option>Adventure & Nature</option>
+            <option>Culture & History</option>
+            <option>Relaxation & Beaches</option>
+            <option>Shopping & Nightlife</option>
+            <option>Family with Kids</option>
+            <option>Romantic Getaway</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Special Requests (optional)</label>
+          <textarea id="planNotes" placeholder="Any dietary needs, accessibility requirements, must-see sights…"></textarea>
+        </div>
+      </div>
+      <button class="btn-gold" onclick="generatePlan()" style="width:100%;justify-content:center;display:flex;padding:16px">🗺️ Generate My Trip Plan</button>
+      <div class="planner-result" id="plannerResult">
+        <div class="result-title" id="resultTitle">Your Personalized Itinerary</div>
+        <div class="result-grid" id="resultGrid"></div>
+        <div id="resultItinerary" style="margin-top:1.5rem"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRAVEL TIPS -->
+<section id="tips">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Pro Tips</span>
+      <h2 class="section-title">Travel Smarter, <em>Not Harder</em></h2>
+      <p class="section-desc">Expert advice to make every trip safer, cheaper, and more memorable.</p>
+    </div>
+    <div class="tips-grid">
+      <div class="tip-card reveal"><div class="tip-number">01</div><h3 class="tip-title">Book Flights 6–8 Weeks Early</h3><p class="tip-desc">International fares from India drop significantly when booked 6–8 weeks in advance. Use incognito mode to prevent price hikes.</p></div>
+      <div class="tip-card reveal"><div class="tip-number">02</div><h3 class="tip-title">Get Travel Insurance</h3><p class="tip-desc">A ₹500–₹2,000 travel insurance policy can save lakhs in medical emergencies abroad. Never skip this step.</p></div>
+      <div class="tip-card reveal"><div class="tip-number">03</div><h3 class="tip-title">Carry a Forex Card</h3><p class="tip-desc">Multi-currency forex cards (HDFC, Thomas Cook) save 3–5% on conversion fees compared to airport exchange counters.</p></div>
+      <div class="tip-card reveal"><div class="tip-number">04</div><h3 class="tip-title">Visit Off-Season</h3><p class="tip-desc">Travel in shoulder seasons: Bali in Nov, Europe in Oct, Dubai in May. Hotels drop 40–60% and crowds disappear.</p></div>
+      <div class="tip-card reveal"><div class="tip-number">05</div><h3 class="tip-title">Download Offline Maps</h3><p class="tip-desc">Google Maps and Maps.me work offline. Download destination maps before you land — essential in areas with weak signal.</p></div>
+      <div class="tip-card reveal"><div class="tip-number">06</div><h3 class="tip-title">Always Carry a Power Bank</h3><p class="tip-desc">A 20,000 mAh power bank is a traveler's best friend. Keep your phone, camera, and earbuds charged on long travel days.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-img-wrap reveal">
+        <img src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80" alt="Travel planning">
+      </div>
+      <div class="about-text reveal">
+        <span class="section-tag">About SkyRoute</span>
+        <h2 class="section-title">Built for Indian <em>Travelers</em></h2>
+        <p>SkyRoute Planner was born from a simple frustration: most travel platforms show prices in dollars with generic advice that doesn't apply to Indian travelers.</p>
+        <p>We built SkyRoute specifically for Indians — with budgets in INR, visa guidance from India, and itineraries that work with Indian tastes, dietary needs, and travel preferences.</p>
+        <p>Our AI has been trained on thousands of real Indian travel experiences, blogs, and reviews to give you advice that's genuinely useful — not generic.</p>
+        <div class="about-tags">
+          <span class="about-tag">🇮🇳 Made for India</span>
+          <span class="about-tag">💰 INR Pricing</span>
+          <span class="about-tag">🤖 AI-Powered</span>
+          <span class="about-tag">🎓 Academic Project</span>
+          <span class="about-tag">📱 Mobile-First</span>
+        </div>
+        <br>
+        <p style="font-size:0.82rem;color:var(--muted)">This is a Mini Project created by <strong style="color:var(--gold)">Pushpa Rani</strong>, Student at Geeta University, as part of the ABA Course.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Get in Touch</span>
+      <h2 class="section-title">We'd Love to <em>Hear from You</em></h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-info reveal">
+        <h3>Plan Your Trip With Us</h3>
+        <p>Have questions about a destination, need help planning a custom itinerary, or just want to share your travel experience? We're here for you.</p>
+        <div class="contact-detail"><span>📧</span><span>hello@skyroute.in</span></div>
+        <div class="contact-detail"><span>📞</span><span>+91 98765 43210</span></div>
+        <div class="contact-detail"><span>📍</span><span>Geeta University, Panipat, Haryana</span></div>
+        <div class="contact-detail"><span>⏰</span><span>Mon–Sat, 9AM – 7PM IST</span></div>
+      </div>
+      <div class="contact-form reveal">
+        <div class="form-group"><label>Full Name</label><input type="text" placeholder="Your name"></div>
+        <div class="form-group"><label>Email</label><input type="email" placeholder="email@example.com"></div>
+        <div class="form-group"><label>Subject</label><input type="text" placeholder="Trip planning, feedback…"></div>
+        <div class="form-group"><label>Message</label><textarea placeholder="Tell us how we can help…"></textarea></div>
+        <button class="btn-gold" style="width:100%;justify-content:center;display:flex;padding:14px" onclick="submitContact()">Send Message →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand-name">Sky<em>Route</em> Planner</div>
+      <p class="footer-tagline">Your AI-Powered Travel Companion.<br>Explore the world, the smarter way.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Explore</h4>
+      <ul>
+        <li><a href="#destinations">Destinations</a></li>
+        <li><a href="#planner">Trip Planner</a></li>
+        <li><a href="#tips">Travel Tips</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Popular</h4>
+      <ul>
+        <li><a href="#" onclick="openDest('dubai')">Dubai</a></li>
+        <li><a href="#" onclick="openDest('paris')">Paris</a></li>
+        <li><a href="#" onclick="openDest('bali')">Bali</a></li>
+        <li><a href="#" onclick="openDest('goa')">Goa</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Connect</h4>
+      <ul>
+        <li><a href="#contact">Contact Us</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">YouTube</a></li>
+        <li><a href="#">Newsletter</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 SkyRoute Planner. All rights reserved.</p>
+    <div class="footer-credit">
+      <strong>Pushpa Rani</strong><br>
+      Student at Geeta University · Mini Project – ABA Course
+    </div>
+  </div>
+</footer>
+
+<!-- AI CHAT -->
+<button class="chat-toggle" id="chatToggle" onclick="toggleChat()">🤖</button>
+<div class="chat-window" id="chatWindow">
+  <div class="chat-header">
+    <div class="chat-header-info">
+      <span class="chat-avatar">🤖</span>
+      <div><h4>SkyRoute AI</h4><span class="chat-status">● Online</span></div>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg bot"><p>Hi! I'm your SkyRoute AI assistant. Ask me about destinations, budgets, visas, or travel tips! 🌍</p></div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chatInput" placeholder="Ask anything about travel…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="chat-send-btn" onclick="sendChat()">Send</button>
+  </div>
+</div>
+
+<!-- DESTINATION DETAIL OVERLAY -->
+<div class="page-overlay" id="pageOverlay">
+  <button class="page-close" onclick="closeDest()">← Back to Destinations</button>
+  <div id="pageContent"></div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+const DESTINATIONS = {
+  dubai: {
+    id:'dubai', name:'Dubai', country:'UAE', badge:'Luxury',
+    heroImg:'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80',
+    subtitle:'Luxury, desert adventures & world-class architecture',
+    duration:'5–6 Days', bestTime:'November – March', rating:'4.9',
+    budget:{flight:'35,000–55,000',hotel:'20,000–50,000',food:'5,000–12,000',transport:'4,000–8,000',total:'₹80,000 – ₹1,50,000'},
+    about:`Dubai is the crown jewel of the UAE — a gleaming desert metropolis that transformed from a small fishing village to one of the world's most ambitious cities in just 50 years. Home to the world's tallest building, largest malls, and most extravagant hotels, Dubai delivers an experience that is genuinely other-worldly.`,
+    whyVisit:`Dubai offers a unique mix of ultra-modern attractions and genuine Arabian heritage. Whether you're skydiving over the Palm, shopping in gold souks, or dining 828 metres above the ground, every moment is extraordinary.`,
+    places:[
+      {icon:'🏙️',name:'Burj Khalifa',desc:'World\'s tallest building at 828m. Take the At.mosphere elevator to the 148th floor for panoramic views.'},
+      {icon:'🛍️',name:'Dubai Mall',desc:'The world\'s largest mall with 1,200+ stores, an indoor ice rink, and a massive aquarium.'},
+      {icon:'🐪',name:'Desert Safari',desc:'Sunset dune bashing, camel rides, belly dance shows and authentic Bedouin BBQ dinner.'},
+      {icon:'⛵',name:'Dubai Marina',desc:'A 3km waterfront with luxury yachts, rooftop restaurants, and vibrant nightlife.'},
+      {icon:'🌴',name:'Palm Jumeirah',desc:'Artificial palm-shaped island home to Atlantis resort, 5-star hotels and private beaches.'},
+      {icon:'🕌',name:'Old Dubai Souks',desc:'Explore the Gold Souk, Spice Souk and traditional Abra boat rides across Dubai Creek.'},
+    ],
+    activities:['Skydiving over Palm Jumeirah (₹30,000–₹50,000)','Hot air balloon over the desert (₹18,000)','Luxury yacht charter (₹8,000–₹25,000/person)','Dubai Frame for city panoramas (₹1,200)','Indoor skiing at Ski Dubai (₹4,000)'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indian passport holders get visa-on-arrival for 14 days (free). For longer stays, apply for a 30/60-day tourist visa (₹4,000–₹8,000) in advance.'},
+      {icon:'👗',title:'Dress Code',text:'Cover shoulders and knees in malls, souks, and mosques. Swimwear only on the beach. Avoid public displays of affection.'},
+      {icon:'🌡️',title:'Weather',text:'November–March is perfect (18–28°C). June–September is extremely hot (40°C+). Avoid summer unless you want indoor-only activities.'},
+      {icon:'💳',title:'Currency',text:'AED (Dirham). ₹1 ≈ 0.044 AED. Forex cards save on conversion. ATMs widely available. Cards accepted everywhere.'},
+      {icon:'🍽️',title:'Food',text:'Plenty of vegetarian and halal options. Indian restaurants are everywhere. Alcohol only in licensed hotels/restaurants.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1526495124232-a04e1849168c?w=800&q=80',
+      'https://images.unsplash.com/photo-1534077934462-5beba85b6b43?w=800&q=80',
+      'https://images.unsplash.com/photo-1596436889106-be35e843f974?w=800&q=80',
+      'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&q=80',
+      'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=800&q=80',
+    ]
+  },
+  paris: {
+    id:'paris', name:'Paris', country:'France', badge:'Romance',
+    heroImg:'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80',
+    subtitle:'Art, culture, cuisine & the City of Eternal Romance',
+    duration:'5–7 Days', bestTime:'April – June, Sept – Oct', rating:'4.8',
+    budget:{flight:'55,000–85,000',hotel:'30,000–70,000',food:'8,000–15,000',transport:'5,000–10,000',total:'₹1,50,000 – ₹2,50,000'},
+    about:`Paris, the City of Light, is one of the world's most visited destinations — and for good reason. From the iconic Eiffel Tower to hidden neighbourhood bistros, every corner of Paris tells a story of art, revolution, fashion, and romance that has captivated the world for centuries.`,
+    whyVisit:`Paris is a feast for every sense. World-class museums, Michelin-starred restaurants, couture fashion houses, and architectural wonders are woven into the fabric of daily Parisian life. No city does sophistication quite like Paris.`,
+    places:[
+      {icon:'🗼',name:'Eiffel Tower',desc:'Book timed tickets online (€28/person). Visit at dusk for the golden hour glow, return after dark for the hourly light show.'},
+      {icon:'🖼️',name:'Louvre Museum',desc:'World\'s largest art museum. Home to Mona Lisa, Venus de Milo, and 35,000+ artworks. Book in advance.'},
+      {icon:'⛪',name:'Notre-Dame Cathedral',desc:'Gothic masterpiece (under restoration). Explore the exterior and nearby Île de la Cité island.'},
+      {icon:'🎨',name:'Montmartre',desc:'Bohemian hilltop neighbourhood with Sacré-Cœur basilica, artist studios, and incredible city views.'},
+      {icon:'🛍️',name:'Champs-Élysées',desc:'The world\'s most famous avenue, stretching 1.9km from the Arc de Triomphe to Place de la Concorde.'},
+      {icon:'🌿',name:'Versailles Palace',desc:'1-hour day trip from Paris. Explore the royal palace and its magnificent 800-hectare gardens.'},
+    ],
+    activities:['Seine River dinner cruise (₹5,000–₹10,000)','Paris by night illumination tour','Champagne tasting in a cave (₹4,000)','Cooking class: croissants and macarons','Day trip to Mont Saint-Michel'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indians need a Schengen Visa. Apply at the French embassy at least 6–8 weeks in advance. Cost: ~₹8,000. Rejection rare with proper documents.'},
+      {icon:'🚇',title:'Transport',text:'Paris Métro is excellent. Buy a carnet (10 rides) or Navigo weekly pass (€30). Avoid taxis — use the metro or Vélib\' bikes.'},
+      {icon:'🗣️',title:'Language',text:'French is preferred. Learn bonjour, merci, s\'il vous plaît. Parisians are friendlier when you try to speak French first.'},
+      {icon:'🎟️',title:'Museum Pass',text:'Paris Museum Pass (€62/2 days) covers Louvre, Versailles, Orsay, and 50+ more. Excellent value if you\'re a museum lover.'},
+      {icon:'🍷',title:'Dining',text:'Lunch menus (prix-fixe) are 30–50% cheaper than dinner. Never eat near tourist attractions. Walk 2–3 blocks for authentic bistros.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800&q=80',
+      'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80',
+      'https://images.unsplash.com/photo-1543349689-9a4d426bee8e?w=800&q=80',
+      'https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=800&q=80',
+      'https://images.unsplash.com/photo-1522093007474-d86e9bf7ba6f?w=800&q=80',
+    ]
+  },
+  bali: {
+    id:'bali', name:'Bali', country:'Indonesia', badge:'Trending',
+    heroImg:'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
+    subtitle:'Temples, terraced rice fields & tropical paradise',
+    duration:'5–7 Days', bestTime:'April – October', rating:'4.9',
+    budget:{flight:'20,000–40,000',hotel:'10,000–35,000',food:'2,000–6,000',transport:'3,000–7,000',total:'₹70,000 – ₹1,20,000'},
+    about:`Bali is the "Island of the Gods" — an Indonesian paradise of terraced rice paddies, volcanic mountains, ancient Hindu temples, and world-class surf. India's most popular international destination, Bali captivates with its spiritual energy, warm hospitality, and extraordinary natural beauty.`,
+    whyVisit:`Bali offers an unmatched combination of culture, nature, and affordability. From Ubud's artist communities and jungle swings to Seminyak's beach clubs and Kuta's surf breaks — there's a Bali for every traveler.`,
+    places:[
+      {icon:'🌅',name:'Tanah Lot Temple',desc:'Iconic sea temple on a rock formation. Best visited at sunset for dramatic ocean backdrop photographs.'},
+      {icon:'🌾',name:'Tegalalang Rice Terraces',desc:'UNESCO-listed emerald-green terraces in Ubud. The jungle swing here is Bali\'s most Instagram-worthy spot.'},
+      {icon:'🦁',name:'Sacred Monkey Forest',desc:'Dense jungle sanctuary in Ubud home to 700+ Balinese long-tailed macaques and ancient temples.'},
+      {icon:'🌊',name:'Seminyak Beach',desc:'Bali\'s most upscale beach strip with infinity pools, chic beach clubs, and world-class restaurants.'},
+      {icon:'🏄',name:'Kuta & Legian',desc:'Surfing mecca for beginners. Rent a board (₹500/hr), take a lesson, and ride your first wave.'},
+      {icon:'🌋',name:'Mount Batur Sunrise',desc:'Wake at 2AM for a 2-hour hike to Bali\'s active volcano. Summit at dawn for breathtaking views over the caldera.'},
+    ],
+    activities:['White-water rafting on Ayung River (₹2,500)','ATV jungle adventure (₹3,000)','Traditional Balinese cooking class (₹3,000)','Spa day: Balinese massage (₹1,500–₹4,000)','Blue Lagoon snorkeling trip (₹2,500)'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indians get a free visa-on-arrival (VOA) for 30 days, extendable once. No pre-application needed. Fill immigration form on flight.'},
+      {icon:'🛵',title:'Transport',text:'Rent a scooter (₹400/day) for maximum freedom. Use Gojek/Grab apps for affordable rides. Bemos (local vans) are cheapest.'},
+      {icon:'👙',title:'Culture',text:'Cover up when entering temples (sarong provided). Don\'t point feet at people. Step over ceremonial offerings on streets — never on them.'},
+      {icon:'💊',title:'Health',text:'Drink only bottled water. Mosquito repellent is essential. Visit a travel clinic for Hep A and Typhoid vaccines before departure.'},
+      {icon:'💰',title:'Money',text:'IDR (Rupiah). ₹1 ≈ 188 IDR. Withdraw large amounts from ATMs (lower fees). Avoid airport exchange. Bargain at markets.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=800&q=80',
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+      'https://images.unsplash.com/photo-1539367628448-4bc5c9d171c8?w=800&q=80',
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+      'https://images.unsplash.com/photo-1563784462041-5f97ac9523dd?w=800&q=80',
+    ]
+  },
+  goa: {
+    id:'goa', name:'Goa', country:'India', badge:'Popular',
+    heroImg:'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80',
+    subtitle:'Beach vibes, Portuguese heritage & unforgettable sunsets',
+    duration:'4–5 Days', bestTime:'November – March', rating:'4.7',
+    budget:{flight:'4,000–15,000',hotel:'4,000–20,000',food:'1,500–5,000',transport:'2,000–5,000',total:'₹15,000 – ₹40,000'},
+    about:`Goa is India's perennial favourite — a tiny coastal state with a massive personality. Former Portuguese colony turned party capital, Goa blends European architecture with Indian warmth, golden beaches with verdant spice plantations, and feni-soaked beach shacks with luxury resorts.`,
+    whyVisit:`Goa is the one destination that works for everyone: backpackers, families, honeymoon couples, and solo travelers. The beaches, the food, the nightlife, and the golden light at sunset are all genuinely world-class — at Indian prices.`,
+    places:[
+      {icon:'🏖️',name:'Palolem Beach',desc:'South Goa\'s most beautiful crescent-shaped beach. Calm waters, swaying palms, and laid-back beach huts.'},
+      {icon:'🎉',name:'Baga & Calangute',desc:'North Goa\'s party coast. Beach clubs, water sports, Tito\'s nightclub, and a buzzing Saturday night market.'},
+      {icon:'⛪',name:'Old Goa Churches',desc:'UNESCO World Heritage site. Basilica of Bom Jesus houses the relics of St. Francis Xavier (200+ years old).'},
+      {icon:'🌿',name:'Dudhsagar Waterfalls',desc:'One of India\'s tallest waterfalls, deep in the Western Ghats jungle. Take a jeep safari from Mollem (Nov–May only).'},
+      {icon:'🍺',name:'Anjuna Flea Market',desc:'Wednesday flea market selling handicrafts, jewelry, clothes and antiques. Best for souvenirs at bargain prices.'},
+      {icon:'🛥️',name:'Mandovi River Cruise',desc:'Sunset cruise with Goan folk dance and live music. Perfect for couples and families. Book at Panaji jetty.'},
+    ],
+    activities:['Paragliding at Arambol (₹2,500–₹3,500)','White-water kayaking at Mandovi','Scuba diving at Grande Island (₹4,500)','Spice plantation tour with lunch (₹800–₹1,500)','Casino cruise on Mandovi River (₹1,500–₹3,000)'],
+    tips:[
+      {icon:'🚗',title:'Transport',text:'Rent a scooty (₹300–₹500/day) or a car (₹800–₹1,500/day). Goa has no Ola/Uber; use local auto-rickshaws or Rapido bikes.'},
+      {icon:'🌧️',title:'Weather',text:'Best from Nov–Mar. Avoid July–September (monsoon). March–May is hot but beaches are empty and prices drop.'},
+      {icon:'🍽️',title:'Food',text:'Must-try: fish curry rice, prawn balchão, bebinca dessert, and sausage pav. Avoid touristy restaurants near beaches for authentic food.'},
+      {icon:'🌊',title:'Safety',text:'Only swim at patrolled beaches with lifeguards. Watch for red flags during high tide. Secure belongings on beaches.'},
+      {icon:'🏨',title:'Accommodation',text:'Book 3+ months in advance for Dec–Jan peak season. North Goa for nightlife; South Goa for peace. Panjim for culture.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
+      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+      'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&q=80',
+      'https://images.unsplash.com/photo-1587653463876-9e70b2b00000?w=800&q=80',
+    ]
+  },
+  manali: {
+    id:'manali', name:'Manali', country:'India — Himachal Pradesh', badge:'Adventure',
+    heroImg:'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800&q=80',
+    subtitle:'Snow peaks, river valleys & Himalayan adventures',
+    duration:'4–6 Days', bestTime:'Oct – June (avoid monsoon)', rating:'4.8',
+    budget:{flight:'3,000–12,000',hotel:'2,000–10,000',food:'800–3,000',transport:'2,000–8,000',total:'₹10,000 – ₹30,000'},
+    about:`Manali is the Himalayan jewel of Himachal Pradesh — a mountain town at 2,050m surrounded by snow-capped peaks, pine forests, apple orchards, and rushing rivers. Once a hippie haven on the old Silk Route, Manali is now India's most beloved mountain escape.`,
+    whyVisit:`From skiing on Solang Valley slopes to camping under Spiti stars, from paragliding over Kullu valley to crossing the legendary Rohtang Pass — Manali is a paradise for adventure seekers and nature lovers alike.`,
+    places:[
+      {icon:'❄️',name:'Rohtang Pass',desc:'Snow-covered pass at 3,978m. Open June–October. Offers skiing, snowboarding, and dramatic Himalayan panoramas.'},
+      {icon:'🎿',name:'Solang Valley',desc:'India\'s premier ski resort in winter (Jan–Mar). In summer, it transforms into a paragliding and zorbing destination.'},
+      {icon:'🏔️',name:'Hadimba Temple',desc:'Ancient 16th-century wooden temple dedicated to Goddess Hadimba, set in a dense cedar forest.'},
+      {icon:'🌊',name:'Beas River Rafting',desc:'Grade II–IV white-water rapids near Pirdi. Book a 14km rafting package (₹800–₹1,500) for the complete rush.'},
+      {icon:'🏕️',name:'Camping at Sethan',desc:'Off-grid Himalayan camping near an untouched meadow. Night skies so clear you can see the Milky Way.'},
+      {icon:'🚗',name:'Spiti Valley Road Trip',desc:'Epic 4-day road trip through the world\'s highest inhabited villages. Rent a 4×4 in Manali.'},
+    ],
+    activities:['Paragliding at Solang Valley (₹2,500–₹3,500)','Snow scooter ride at Rohtang (₹1,500)','River rafting at Pirdi (₹800–₹1,500)','Zorbing at Solang (₹300–₹500)','Trek to Bhrigu Lake (3 days, ₹3,000)'],
+    tips:[
+      {icon:'🏔️',title:'Altitude',text:'Manali is at 2,050m. Some people feel mild altitude sickness. Avoid alcohol and strenuous activity on day 1. Carry Diamox if sensitive.'},
+      {icon:'🌡️',title:'Weather',text:'Dec–Feb: heavy snow, -10°C. Mar–May: snow melting, cool. Jun–Sept: monsoon in Kullu. Oct–Nov: crisp and clear — our favourite.'},
+      {icon:'🚗',title:'Getting There',text:'Overnight bus from Delhi (₹800–₹2,000). Bhuntar airport (50km) for flights. Rent bikes (₹800/day) or cars for local travel.'},
+      {icon:'👕',title:'Packing',text:'Layer up regardless of season. Thermal underlayers + fleece + waterproof jacket. Sturdy hiking boots. Sunscreen is crucial at altitude.'},
+      {icon:'📡',title:'Connectivity',text:'BSNL has the best network in remote areas. Download offline maps. Inform someone of your trekking routes.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1582872773946-d9a6f4ef42f8?w=800&q=80',
+      'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?w=800&q=80',
+      'https://images.unsplash.com/photo-1593171872032-f5f54d8a1578?w=800&q=80',
+      'https://images.unsplash.com/photo-1615729947596-a598e5de0ab3?w=800&q=80',
+      'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80',
+    ]
+  },
+  maldives: {
+    id:'maldives', name:'Maldives', country:'Maldives', badge:'Luxury',
+    heroImg:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=800&q=80',
+    subtitle:'Overwater villas, crystal lagoons & pristine coral reefs',
+    duration:'4–6 Days', bestTime:'November – April', rating:'5.0',
+    budget:{flight:'18,000–40,000',hotel:'35,000–1,20,000',food:'5,000–15,000',transport:'8,000–20,000',total:'₹1,00,000 – ₹2,50,000'},
+    about:`The Maldives is the world's lowest-lying country — 1,200 coral islands scattered like emeralds across the Indian Ocean, southwest of Sri Lanka. Home to the world's most famous overwater bungalows and some of Earth's clearest waters, it's the ultimate luxury escape.`,
+    whyVisit:`Nowhere on Earth combines such perfect turquoise water, white sand, and vibrant marine life. Snorkel with whale sharks, watch manta rays glide beneath you at dinner, or simply lie in a hammock over the lagoon. The Maldives is genuinely paradise.`,
+    places:[
+      {icon:'🌊',name:'Veligandu Island',desc:'Budget-friendly paradise island with stunning house reef for snorkeling directly from the beach.'},
+      {icon:'🐠',name:'Maafushi Island',desc:'Most popular budget island. Beach, water sports, dive schools, and great local restaurants at a fraction of resort prices.'},
+      {icon:'🦈',name:'Maaya Thila',desc:'Legendary night dive site known for white-tip reef sharks, giant moray eels, and vibrant corals.'},
+      {icon:'🌅',name:'Hulhumalé',desc:'New city island connected by ferry from Male. Young, modern, with affordable guesthouses and great food.'},
+      {icon:'🚤',name:'Male City',desc:'Compact capital island. Visit the Grand Friday Mosque, fish market, and colourful local cafés.'},
+    ],
+    activities:['Snorkeling with whale sharks (₹5,000–₹8,000)','Scuba diving (₹4,000–₹8,000/dive)','Sunset dolphin cruise (₹3,000–₹6,000)','Private sandbank picnic transfer (₹8,000)','Underwater restaurant experience'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indians get a free 30-day visa-on-arrival. No prior application needed. Just show your hotel booking and proof of funds.'},
+      {icon:'🚤',title:'Transfers',text:'Speedboat transfers (₹2,000–₹8,000) vs seaplane (₹15,000–₹30,000). Book in advance. Seaplanes are daytime-only.'},
+      {icon:'🚫',title:'Culture',text:'Maldives is 100% Muslim. No alcohol on inhabited islands (only in resorts). Dress modestly outside beaches.'},
+      {icon:'💰',title:'Budget Tips',text:'Stay on local islands (Maafushi, Thinadhoo) instead of resorts. Cook breakfast in guesthouse kitchenettes. Huge savings!'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=800&q=80',
+      'https://images.unsplash.com/photo-1540202404-a2f29e0c-0b1d?w=800&q=80',
+      'https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?w=800&q=80',
+      'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&q=80',
+      'https://images.unsplash.com/photo-1439405326854-014607f694d7?w=800&q=80',
+    ]
+  },
+  singapore: {
+    id:'singapore', name:'Singapore', country:'Singapore', badge:'City',
+    heroImg:'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80',
+    subtitle:'Garden city of futuristic skylines & multicultural flavours',
+    duration:'4–5 Days', bestTime:'February – April', rating:'4.8',
+    budget:{flight:'10,000–25,000',hotel:'12,000–40,000',food:'4,000–10,000',transport:'2,000–5,000',total:'₹50,000 – ₹1,00,000'},
+    about:`Singapore is Asia's most polished city-state — a 733 sq km island that packs in futuristic architecture, a UNESCO Botanic Garden, Michelin-starred hawker stalls, and seamless multi-cultural harmony. Think of it as an immaculate gateway to Southeast Asia.`,
+    whyVisit:`Singapore works as both a destination and a base for exploring Southeast Asia. Easy visa for Indians (E-visa), English everywhere, safe streets, world-class food at every budget level, and extraordinary attractions like Gardens by the Bay.`,
+    places:[
+      {icon:'🌿',name:'Gardens by the Bay',desc:'Iconic Supertrees and two giant conservatories (Flower Dome & Cloud Forest). The light show at 7:45PM and 8:45PM is free.'},
+      {icon:'🎡',name:'Universal Studios',desc:'Southeast Asia\'s only Universal theme park on Sentosa Island. Book tickets (₹5,500/adult) online well in advance.'},
+      {icon:'🦁',name:'Singapore Zoo & Safari',desc:'The Night Safari (7:15PM–midnight) is uniquely magical — the world\'s first nocturnal wildlife park.'},
+      {icon:'🍜',name:'Hawker Centres',desc:'Maxwell Food Centre, Lau Pa Sat, and Newton Circus serve world-class food at ₹150–₹400 per dish.'},
+      {icon:'🛍️',name:'Orchard Road',desc:'3km shopping boulevard with 22 malls, 300,000 sq m of retail, and every global brand known to man.'},
+    ],
+    activities:['Marina Bay Sands SkyPark observation (₹2,500)','River cruise & Clarke Quay night tour','Sentosa cable car (₹2,800 return)','ArtScience Museum experience','Singapore Flyer wheel (₹1,800)'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indians get a free 96-hour transit visa or apply for an e-visa (₹3,000–₹5,000). Processed in 1–3 days online. Very straightforward.'},
+      {icon:'🚇',title:'MRT',text:'Singapore MRT is world-class. Buy an EZ-Link card (top up as you go). Near-zero crime. Walk, don\'t taxi.'},
+      {icon:'🌧️',title:'Weather',text:'Hot and humid year-round (27–34°C). Brief tropical showers are common. Travel light and carry a small umbrella.'},
+      {icon:'🚫',title:'Rules',text:'No chewing gum import (fine ₹90,000). No littering (fine ₹50,000). No smoking in public. Singapore takes its rules seriously.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1545900984-25fe5c1e74b7?w=800&q=80',
+      'https://images.unsplash.com/photo-1583394293214-01e2ebb08c32?w=800&q=80',
+      'https://images.unsplash.com/photo-1571403168012-6b0a48b2e94c?w=800&q=80',
+      'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=800&q=80',
+      'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&q=80',
+    ]
+  },
+  bangkok: {
+    id:'bangkok', name:'Bangkok', country:'Thailand', badge:'Value',
+    heroImg:'https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=1600&q=80',
+    cardImg:'https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800&q=80',
+    subtitle:'Temples, street food & vibrant Southeast Asian energy',
+    duration:'4–5 Days', bestTime:'November – February', rating:'4.7',
+    budget:{flight:'10,000–25,000',hotel:'5,000–20,000',food:'1,500–5,000',transport:'2,000–5,000',total:'₹30,000 – ₹70,000'},
+    about:`Bangkok is one of Asia's most electrifying cities — a sensory overload of golden temples, floating markets, Michelin-starred street food stalls, rooftop bars, and round-the-clock nightlife. Thailand's capital is endlessly fascinating and remarkably affordable for Indian travelers.`,
+    whyVisit:`Bangkok delivers extraordinary value. World-class experiences at Indian-level prices. The food scene alone is worth the trip — from pad thai at a street stall to 7-course tasting menus with Bangkok skyline views.`,
+    places:[
+      {icon:'🏯',name:'Grand Palace & Wat Phra Kaew',desc:'Bangkok\'s most sacred site. The emerald Buddha temple and palace complex is breathtaking. Dress code strictly enforced.'},
+      {icon:'⛵',name:'Chao Phraya River',desc:'Take the public ferry (₹25/trip) along Bangkok\'s historic river. Get off at any temple and explore on foot.'},
+      {icon:'🌊',name:'Khao San Road',desc:'Backpacker street party central. Street food, cheap cocktails, live music, and travelers from every corner of the globe.'},
+      {icon:'🛕',name:'Wat Arun (Temple of Dawn)',desc:'Stunning riverside temple best viewed from across the Chao Phraya at sunset. Instagram gold.'},
+      {icon:'🛍️',name:'Chatuchak Weekend Market',desc:'One of the world\'s largest markets: 15,000 stalls, 200,000 visitors every weekend. Saturday & Sunday only.'},
+    ],
+    activities:['Thai cooking class (₹2,500–₹4,000)','Muay Thai boxing match (₹1,500)','Floating market tour (₹2,500)','Rooftop bar sunset cocktails','Day trip to Ayutthaya ancient temples'],
+    tips:[
+      {icon:'🛂',title:'Visa',text:'Indians can get a visa-on-arrival (₹3,500 fee) valid 15 days, or apply for a 30-day tourist visa in advance from the Thai Embassy.'},
+      {icon:'👗',title:'Temple Dress',text:'Must cover shoulders and knees at all temples. Many entrances have free sarong loans. Dress respectfully always.'},
+      {icon:'🌡️',title:'Weather',text:'Nov–Feb is cool and dry (perfect). Mar–May is scorching hot. Jun–Oct is monsoon season with daily rains.'},
+      {icon:'🍜',title:'Food Safety',text:'Eat where locals eat. Avoid food left in the sun. Drink bottled water only. Street food from fresh-cooked stalls is usually safer than restaurant buffets.'},
+    ],
+    gallery:[
+      'https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800&q=80',
+      'https://images.unsplash.com/photo-1598935898639-81586f7d2129?w=800&q=80',
+      'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
+      'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80',
+      'https://images.unsplash.com/photo-1600095890831-25e26a7d5050?w=800&q=80',
+    ]
+  }
+};
+
+// ─── RENDER DESTINATIONS ─────────────────────────────
+function renderDestinations(filter='') {
+  const grid = document.getElementById('destGrid');
+  const keys = Object.keys(DESTINATIONS).filter(k =>
+    !filter || DESTINATIONS[k].name.toLowerCase().includes(filter.toLowerCase()) ||
+    DESTINATIONS[k].country.toLowerCase().includes(filter.toLowerCase())
+  );
+  grid.innerHTML = keys.map(k => {
+    const d = DESTINATIONS[k];
+    return `<div class="dest-card reveal" onclick="openDest('${d.id}')">
+      <img class="dest-img" src="${d.cardImg}" alt="${d.name}" loading="lazy">
+      <div class="dest-overlay"></div>
+      <div class="dest-badge">${d.badge}</div>
+      <div class="dest-info">
+        <div class="dest-country">${d.country}</div>
+        <div class="dest-name">${d.name}</div>
+        <div class="dest-meta">
+          <span>📅 ${d.duration}</span>
+          <span>☀️ ${d.bestTime.split(',')[0]}</span>
+          <span>⭐ ${d.rating}</span>
+        </div>
+        <div class="dest-budget">Estimated: ${d.budget.total} / person</div>
+        <span class="dest-btn">Explore →</span>
+      </div>
+    </div>`;
+  }).join('');
+  observeReveal();
+}
+
+// ─── HERO SEARCH ─────────────────────────────────────
+function heroSearchGo() {
+  const q = document.getElementById('heroSearch').value.trim();
+  document.getElementById('destinations').scrollIntoView({behavior:'smooth'});
+  setTimeout(() => renderDestinations(q), 400);
+}
+
+// ─── OPEN DESTINATION DETAIL ─────────────────────────
+function openDest(id) {
+  const d = DESTINATIONS[id];
+  if (!d) return;
+  document.getElementById('pageContent').innerHTML = buildDetailPage(d);
+  const overlay = document.getElementById('pageOverlay');
+  overlay.classList.add('open');
+  overlay.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDest() {
+  document.getElementById('pageOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function buildDetailPage(d) {
+  const galleryHTML = d.gallery.map((img, i) =>
+    `<div class="gallery-img"><img src="${img}" alt="${d.name} ${i+1}" loading="lazy"></div>`
+  ).join('');
+
+  const placesHTML = d.places.map(p =>
+    `<div class="place-item">
+      <div class="place-item-icon">${p.icon}</div>
+      <h4>${p.name}</h4>
+      <p>${p.desc}</p>
+    </div>`
+  ).join('');
+
+  const activitiesHTML = (d.activities||[]).map(a =>
+    `<div class="detail-card"><p>${a}</p></div>`
+  ).join('');
+
+  const tipsHTML = (d.tips||[]).map(t =>
+    `<div class="tips-list-item">
+      <span class="tips-list-item-icon">${t.icon}</span>
+      <div class="tips-list-item-text"><h4>${t.title}</h4><p>${t.text}</p></div>
+    </div>`
+  ).join('');
+
+  return `
+    <div class="detail-hero">
+      <div class="detail-hero-bg" style="background-image:url('${d.heroImg}')"></div>
+      <div class="detail-hero-overlay"></div>
+      <div class="detail-hero-content">
+        <span class="section-tag">${d.country}</span>
+        <h1>Explore ${d.name}</h1>
+        <p>${d.subtitle}</p>
+        <div class="detail-cta-bar" style="margin-top:1.5rem">
+          <button class="btn-gold" onclick="planThisTrip('${d.name}, ${d.country}')">🗺️ Plan This Trip</button>
+          <button class="btn-outline" onclick="closeDest()">← All Destinations</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <!-- QUICK FACTS -->
+      <div class="detail-section">
+        <div class="detail-grid-2">
+          <div class="detail-card">
+            <h4>📅 Best Time to Visit</h4>
+            <p>${d.bestTime}</p>
+          </div>
+          <div class="detail-card">
+            <h4>⏱️ Suggested Duration</h4>
+            <p>${d.duration}</p>
+          </div>
+          <div class="detail-card">
+            <h4>⭐ Traveler Rating</h4>
+            <p>${d.rating}/5 (Based on 1,000+ reviews)</p>
+          </div>
+          <div class="detail-card">
+            <h4>💰 Budget Range</h4>
+            <p>${d.budget.total} per person</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">About ${d.name}</h2>
+        <p style="color:var(--muted);line-height:1.9;margin-bottom:1rem">${d.about}</p>
+        <p style="color:var(--muted);line-height:1.9"><strong style="color:var(--text)">Why Visit?</strong> ${d.whyVisit}</p>
+      </div>
+
+      <!-- PLACES -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">Top Places to Visit</h2>
+        <div class="places-list">${placesHTML}</div>
+      </div>
+
+      <!-- ACTIVITIES -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">Things To Do</h2>
+        <div class="detail-grid-2">${activitiesHTML}</div>
+      </div>
+
+      <!-- BUDGET BREAKDOWN -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">Estimated Budget (INR per person)</h2>
+        <div class="budget-box">
+          <div class="budget-title">Real-World Travel Cost Breakdown</div>
+          <div class="budget-items">
+            <div class="budget-item"><div class="budget-item-icon">✈️</div><div class="budget-item-label">Flights (Return)</div><div class="budget-item-value">₹${d.budget.flight}</div></div>
+            <div class="budget-item"><div class="budget-item-icon">🏨</div><div class="budget-item-label">Hotel (per night)</div><div class="budget-item-value">₹${d.budget.hotel}</div></div>
+            <div class="budget-item"><div class="budget-item-icon">🍽️</div><div class="budget-item-label">Food (per day)</div><div class="budget-item-value">₹${d.budget.food}</div></div>
+            <div class="budget-item"><div class="budget-item-icon">🚗</div><div class="budget-item-label">Local Transport</div><div class="budget-item-value">₹${d.budget.transport}</div></div>
+          </div>
+          <div class="budget-total">
+            <span>Total Estimated per Person</span>
+            <span>${d.budget.total}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GALLERY -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">Photo Gallery</h2>
+        <div class="gallery-grid">${galleryHTML}</div>
+      </div>
+
+      <!-- TRAVEL TIPS -->
+      <div class="detail-section">
+        <h2 class="detail-section-title">Essential Travel Tips</h2>
+        <div class="tips-list">${tipsHTML}</div>
+      </div>
+
+      <!-- BOTTOM CTA -->
+      <div style="text-align:center;padding:2rem 0 1rem">
+        <button class="btn-gold" onclick="planThisTrip('${d.name}, ${d.country}')" style="font-size:1rem;padding:16px 40px">🗺️ Plan My Trip to ${d.name}</button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── PLAN THIS TRIP ───────────────────────────────────
+function planThisTrip(dest) {
+  closeDest();
+  const sel = document.getElementById('planDest');
+  if (sel) {
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].text.toLowerCase().includes(dest.split(',')[0].toLowerCase())) {
+        sel.selectedIndex = i; break;
+      }
+    }
+  }
+  setTimeout(() => {
+    document.getElementById('planner').scrollIntoView({behavior:'smooth'});
+  }, 500);
+}
+
+// ─── GENERATE PLAN ────────────────────────────────────
+function generatePlan() {
+  const dest = document.getElementById('planDest').value;
+  const travelers = parseInt(document.getElementById('planTravelers').value) || 2;
+  const days = parseInt(document.getElementById('planDays').value) || 5;
+  const budget = document.getElementById('planBudget').value;
+  const style = document.getElementById('planStyle').value;
+  const date = document.getElementById('planDate').value;
+
+  if (!dest) { alert('Please select a destination!'); return; }
+
+  const key = Object.keys(DESTINATIONS).find(k =>
+    dest.toLowerCase().includes(DESTINATIONS[k].name.toLowerCase())
+  );
+  const d = key ? DESTINATIONS[key] : null;
+
+  const budgetRange = d ? d.budget.total : (budget==='budget' ? '₹20,000–₹50,000' : budget==='mid' ? '₹50,000–₹1,50,000' : '₹1,50,000+');
+  const dateStr = date ? new Date(date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}) : 'Flexible dates';
+
+  const itinerary = generateItinerary(days, style, d);
+
+  document.getElementById('resultTitle').textContent = `Your ${days}-Day ${dest} Itinerary`;
+  document.getElementById('resultGrid').innerHTML = `
+    <div class="result-item"><strong>Destination</strong><span>${dest}</span></div>
+    <div class="result-item"><strong>Travelers</strong><span>${travelers} person${travelers>1?'s':''}</span></div>
+    <div class="result-item"><strong>Travel Date</strong><span>${dateStr}</span></div>
+    <div class="result-item"><strong>Duration</strong><span>${days} days</span></div>
+    <div class="result-item"><strong>Budget per Person</strong><span>${budgetRange}</span></div>
+    <div class="result-item"><strong>Travel Style</strong><span>${style}</span></div>
+  `;
+  document.getElementById('resultItinerary').innerHTML = itinerary;
+
+  const result = document.getElementById('plannerResult');
+  result.classList.add('show');
+  result.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function generateItinerary(days, style, d) {
+  const places = d ? d.places.slice(0,Math.min(days*2,d.places.length)) : [];
+  let html = '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;color:var(--gold);margin-bottom:1rem">Day-by-Day Overview</h3>';
+  for (let i = 1; i <= days; i++) {
+    const place1 = places[(i-1)*2] || {icon:'🌆',name:'Explore the city',desc:'Free time to discover local gems'};
+    const place2 = places[(i-1)*2+1] || {icon:'🍽️',name:'Local dining experience',desc:'Try authentic local cuisine'};
+    html += `<div class="result-item" style="grid-column:1/-1;margin-bottom:8px">
+      <strong>Day ${i}</strong>
+      <span>${place1.icon} ${place1.name} → ${place2.icon} ${place2.name}</span>
+    </div>`;
+  }
+  return html;
+}
+
+// ─── CHAT ─────────────────────────────────────────────
+let chatOpen = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatWindow').classList.toggle('open', chatOpen);
+  if (chatOpen) document.getElementById('chatInput').focus();
+}
+
+const chatResponses = {
+  'dubai': 'Dubai is best visited Nov–March 🌟 Budget: ₹80,000–₹1,50,000 per person (5-6 days). Must-do: Burj Khalifa, Desert Safari, and Palm Jumeirah. Indians get free visa-on-arrival for 14 days! Want to plan a Dubai trip?',
+  'paris': 'Paris is magical in April–June 🗼 Budget: ₹1,50,000–₹2,50,000 per person (5-7 days). Indians need a Schengen Visa (~₹8,000, takes 6-8 weeks). Must-see: Eiffel Tower, Louvre, Versailles!',
+  'bali': 'Bali is India\'s most popular international destination 🌴 Budget: ₹70,000–₹1,20,000 (5-7 days). Free visa-on-arrival for Indians. Best time: April–October. Don\'t miss the rice terraces in Ubud!',
+  'goa': 'Goa is perfect for a quick getaway! 🏖️ Budget: ₹15,000–₹40,000 (4-5 days). Best time: November–March. No passport needed — just hop on a flight or train from anywhere in India!',
+  'manali': 'Manali is stunning in October–November and March–May ❄️ Budget: ₹10,000–₹30,000 (4-6 days). Rohtang Pass, Solang Valley, and Hadimba Temple are must-visits. Great for adventure and nature lovers!',
+  'visa': 'Visa info for popular destinations:\n• Dubai – Free 14-day VOA ✅\n• Bali – Free 30-day VOA ✅\n• Singapore – Free 96hr transit / e-visa ✅\n• Bangkok – Free VOA (15 days) ✅\n• Paris – Schengen Visa required (apply 6-8 weeks early) 📋',
+  'budget': 'Here are realistic Indian travel budgets:\n• Manali: ₹10K–₹30K\n• Goa: ₹15K–₹40K\n• Bali: ₹70K–₹1.2L\n• Dubai: ₹80K–₹1.5L\n• Singapore: ₹50K–₹1L\n• Paris: ₹1.5L–₹2.5L',
+  'cheap': 'Cheapest destinations from India right now:\n1. 🏔️ Manali – From ₹10,000/person\n2. 🏖️ Goa – From ₹15,000/person\n3. 🌴 Bali – From ₹70,000/person\n4. 🌆 Bangkok – From ₹30,000/person',
+  'honeymoon': 'Top honeymoon destinations:\n❤️ Maldives – Overwater bungalows (₹1–2.5L)\n🗼 Paris – City of Love (₹1.5–2.5L)\n🌴 Bali – Romantic & affordable (₹70K–1.2L)\n🏖️ Goa – Budget honeymoon (₹15–40K)',
+};
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML += `<div class="chat-msg user"><p>${msg}</p></div>`;
+  msgs.innerHTML += `<div class="chat-msg bot" id="typingMsg"><p class="typing-indicator"><span></span><span></span><span></span></p></div>`;
+  input.value = '';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  setTimeout(() => {
+    const reply = getReply(msg.toLowerCase());
+    document.getElementById('typingMsg').outerHTML = `<div class="chat-msg bot"><p>${reply}</p></div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 1200);
+}
+
+function getReply(msg) {
+  for (const key of Object.keys(chatResponses)) {
+    if (msg.includes(key)) return chatResponses[key];
+  }
+  if (msg.includes('hello')||msg.includes('hi')) return 'Hi there! 👋 I\'m SkyRoute AI. Ask me about any destination, budget, visa, or travel tips!';
+  if (msg.includes('best')||msg.includes('recommend')) return 'Top picks right now: Bali (best value), Dubai (luxury), Goa (quick escape), Manali (adventure). Which vibe are you going for?';
+  if (msg.includes('flight')||msg.includes('book')) return 'For flights, check IndiGo, Air India, and SpiceJet for domestic. For international, compare on Google Flights, MakeMyTrip, or Skyscanner. Book 6–8 weeks in advance for best prices!';
+  if (msg.includes('safe')||msg.includes('solo')) return 'All destinations on SkyRoute are safe for Indian travelers, including solo women travelers. Dubai, Singapore, and Bali are exceptionally safe. Always share your itinerary with family and keep copies of documents.';
+  return 'Great question! 🌍 Try asking me about specific destinations like "Dubai", "Bali", "Paris", or ask about "visa", "budget", "cheap", or "honeymoon" destinations. I\'m here to help plan your dream trip!';
+}
+
+// ─── NAVBAR ───────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
+});
+
+function toggleNav() {
+  document.getElementById('navLinks').classList.toggle('open');
+}
+
+function navClick(el) {
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('navLinks').classList.remove('open');
+}
+
+// ─── CONTACT ─────────────────────────────────────────
+function submitContact() {
+  alert('Thank you for your message! We\'ll get back to you within 24 hours. 🌍');
+}
+
+// ─── SCROLL REVEAL ────────────────────────────────────
+function observeReveal() {
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+}
+
+// ─── INIT ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderDestinations();
+  observeReveal();
+
+  // close nav on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.navbar')) {
+      document.getElementById('navLinks').classList.remove('open');
+    }
+  });
+
+  // set min date for planner
+  const dateInput = document.getElementById('planDate');
+  if (dateInput) dateInput.min = new Date().toISOString().split('T')[0];
+
+  // active nav on scroll
+  const sections = ['home','features','destinations','planner','tips','about','contact'];
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && window.scrollY >= el.offsetTop - 100) current = id;
+    });
+    document.querySelectorAll('.nav-link').forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#'+current);
+    });
+  });
+});
+</script>
+</body>
+</html>
